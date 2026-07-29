@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BABUJI CHICKEN - Mobile Arcade</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background: #000;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', monospace;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #game-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: top left;
+            border: none;
+            background: #0a0300;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 30%, #2a1500, #0a0300);
+        }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .panel {
+            background: rgba(0,0,0,0.85);
+            border: 3px solid #ffaa00;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            color: #ffdd99;
+            pointer-events: auto;
+            box-shadow: 0 0 40px #ff660088;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            width: 85%;
+            max-width: 400px;
+        }
+        .panel.active { display: flex; }
+        .title {
+            font-size: clamp(28px, 8vw, 42px);
+            font-weight: bold;
+            color: #ffaa00;
+            text-shadow: 0 0 15px #ff6600, 0 0 40px #ff3300;
+            letter-spacing: 3px;
+            line-height: 1.2;
+        }
+        .subtitle {
+            font-size: clamp(14px, 4vw, 18px);
+            color: #ffcc66;
+        }
+        .btn {
+            background: #ff6600;
+            border: none;
+            color: #fff;
+            font-size: clamp(18px, 6vw, 24px);
+            font-family: 'Courier New', monospace;
+            padding: 12px 30px;
+            border-radius: 40px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            box-shadow: 0 6px 0 #993300, 0 0 20px #ff4400;
+            transition: 0.08s linear;
+            width: 80%;
+            max-width: 250px;
+            text-transform: uppercase;
+        }
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #993300, 0 0 25px #ff2200;
+        }
+        .btn.small {
+            font-size: clamp(14px, 4vw, 18px);
+            padding: 10px 20px;
+            width: auto;
+        }
+        .weapon-card {
+            background: #2a1500;
+            border: 3px solid #ffaa00;
+            border-radius: 20px;
+            padding: 15px;
+            width: 45%;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px #ff660055;
+        }
+        .weapon-card:active {
+            background: #442200;
+            border-color: #ffcc00;
+            box-shadow: 0 0 25px #ffaa00;
+        }
+        .weapon-emoji {
+            font-size: clamp(48px, 12vw, 64px);
+            display: block;
+            margin-bottom: 5px;
+        }
+        .weapon-name {
+            font-size: clamp(14px, 4vw, 20px);
+            color: #ffdd88;
+            font-weight: bold;
+        }
+        .weapons-row {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            font-size: clamp(14px, 4vw, 18px);
+            width: 90%;
+        }
+        input[type=range] {
+            flex: 1;
+            accent-color: #ff6600;
+        }
+        select {
+            background: #331100;
+            color: #ffaa00;
+            border: 2px solid #ff6600;
+            font-size: clamp(14px, 4vw, 18px);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-family: 'Courier New', monospace;
+            flex: 1;
+        }
+        .back-btn {
+            background: transparent;
+            border: 2px solid #ffaa00;
+            color: #ffaa00;
+            box-shadow: none;
+            margin-top: 10px;
+        }
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            pointer-events: none;
+            z-index: 25;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 25px;
+        }
+        .joystick-zone {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(255,200,100,0.2) 0%, rgba(200,100,50,0.1) 60%, transparent 71%);
+            border-radius: 50%;
+            border: 2px solid rgba(255,200,100,0.5);
+            position: relative;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        .joystick-knob {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 30% 30%, #ffe0a0, #aa5500);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px #ffaa00;
+            pointer-events: none;
+        }
+        .fire-button {
+            width: 90px;
+            height: 90px;
+            background: radial-gradient(circle at 30% 30%, #ff4444, #660000);
+            border-radius: 50%;
+            border: 3px solid #ffaaaa;
+            box-shadow: 0 0 20px #ff0000, 0 0 50px #ff0000aa;
+            pointer-events: auto;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 22px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px black;
+            transition: transform 0.05s;
+        }
+        .fire-button:active {
+            transform: scale(0.92);
+            background: radial-gradient(circle at 30% 30%, #ff8888, #aa0000);
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <div id="game-wrapper">
+        <canvas id="game"></canvas>
+        <div id="overlay">
+            <div class="panel active" id="menu-panel">
+                <div class="title">BABUJI CHICKEN</div>
+                <div class="subtitle">🪓 Bone Axe VS 🍗 Chicken Legs</div>
+                <button class="btn" id="btn-start">▶ START</button>
+                <button class="btn" id="btn-sound">🔊 SOUND: ON</button>
+                <button class="btn" id="btn-settings">⚙ SETTINGS</button>
+                <button class="btn" id="btn-about">ℹ ABOUT</button>
+            </div>
+            <div class="panel" id="weapon-panel">
+                <div class="title">CHOOSE WEAPON</div>
+                <div class="weapons-row">
+                    <div class="weapon-card" id="choose-axe"><span class="weapon-emoji">🪓</span><span class="weapon-name">BABU AXE</span></div>
+                    <div class="weapon-card" id="choose-sword"><span class="weapon-emoji">🗡️</span><span class="weapon-name">BABU SPECIAL</span></div>
+                </div>
+                <button class="btn small back-btn" id="btn-weapon-back">← BACK</button>
+            </div>
+            <div class="panel" id="settings-panel">
+                <div class="title">SETTINGS</div>
+                <div class="slider-container"><span>🔈 Vol</span><input type="range" id="volume-slider" min="0" max="100" value="80"></div>
+                <div class="slider-container"><span>🗣 Speech</span><select id="speech-toggle"><option value="on">ON (voice)</option><option value="off">OFF (tones)</option></select></div>
+                <div class="slider-container"><span>🎮 Diff</span><select id="difficulty-select"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></div>
+                <button class="btn small back-btn" id="btn-settings-back">← BACK</button>
+            </div>
+            <div class="panel" id="about-panel">
+                <div class="title">ABOUT</div>
+                <p style="font-size:18px; color:#ffcc99;">Made by Inder</p>
+                <button class="btn small back-btn" id="btn-about-back">← BACK</button>
+            </div>
+            <div class="panel" id="gameover-panel">
+                <div class="title">GAME OVER</div>
+                <div id="gameover-score" style="font-size:clamp(16px,5vw,22px); color:#ffdd88;"></div>
+                <button class="btn" id="btn-retry">↺ RETRY</button>
+                <button class="btn small back-btn" id="btn-menu">🏠 MENU</button>
+            </div>
+        </div>
+        <div id="mobile-controls">
+            <div class="joystick-zone" id="joystickZone"><div class="joystick-knob" id="joystickKnob"></div></div>
+            <div class="fire-button" id="fireButton">FIRE</div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('game-wrapper');
+    const container = document.getElementById('game-container');
+    const overlay = document.getElementById('overlay');
+    const mobileControls = document.getElementById('mobile-controls');
+    const joystickZone = document.getElementById('joystickZone');
+    const joystickKnob = document.getElementById('joystickKnob');
+    const fireButton = document.getElementById('fireButton');
+
+    const BASE_W = 600;
+    const BASE_H = 800;
+    canvas.width = BASE_W;
+    canvas.height = BASE_H;
+
+    // Resize canvas to fill container proportionally
+    function resize() {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        const scale = Math.min(w / BASE_W, h / BASE_H);
+        const displayW = BASE_W * scale;
+        const displayH = BASE_H * scale;
+        wrapper.style.width = displayW + 'px';
+        wrapper.style.height = displayH + 'px';
+        wrapper.style.left = (w - displayW) / 2 + 'px';
+        wrapper.style.top = (h - displayH) / 2 + 'px';
+        wrapper.style.transform = 'none'; // no additional scale required
+    }
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', () => setTimeout(resize, 50));
+    resize();
+
+    // ---------- AUDIO SYSTEM ----------
+    let audioCtx = null;
+    let soundEnabled = true;
+    let masterVolume = 0.8;
+    let useSpeech = true;
+
+    async function ensureAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+    }
+
+    function playToneSequence(notes) {
+        if (!audioCtx || !soundEnabled) return;
+        const now = audioCtx.currentTime;
+        notes.forEach(n => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = n.type || 'square';
+            osc.frequency.setValueAtTime(n.freq, now + n.delay);
+            gain.gain.setValueAtTime((n.vol || 0.15) * masterVolume, now + n.delay);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + n.delay + n.dur);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now + n.delay); osc.stop(now + n.delay + n.dur);
+        });
+    }
+
+    function synthBoneHit() {
+        playToneSequence([
+            {freq:300, delay:0, dur:0.15}, {freq:350, delay:0.12, dur:0.1},
+            {freq:400, delay:0.22, dur:0.12}, {freq:500, delay:0.34, dur:0.15},
+            {freq:600, delay:0.5, dur:0.2, vol:0.2}
+        ]);
+    }
+    function synthChickenHit() {
+        playToneSequence([
+            {freq:200, delay:0, dur:0.25, type:'sawtooth'}, {freq:150, delay:0.2, dur:0.3, type:'sawtooth'},
+            {freq:100, delay:0.45, dur:0.35, type:'triangle', vol:0.2}
+        ]);
+    }
+    function synthMilkPower() {
+        playToneSequence([
+            {freq:800, delay:0, dur:0.08}, {freq:1000, delay:0.08, dur:0.08},
+            {freq:1200, delay:0.16, dur:0.1}, {freq:1400, delay:0.26, dur:0.12}
+        ]);
+    }
+    function synthPlayerDeath() {
+        playToneSequence([
+            {freq:250, delay:0, dur:0.4, type:'sawtooth', vol:0.2}, {freq:150, delay:0.3, dur:0.5, type:'sawtooth'},
+            {freq:70, delay:0.6, dur:0.8, type:'triangle', vol:0.25}
+        ]);
+    }
+
+    function speakIfEnabled(text) {
+        if (!useSpeech || !soundEnabled || !window.speechSynthesis) return false;
+        const u = new SpeechSynthesisUtterance(text);
+        u.volume = masterVolume;
+        u.rate = 0.9;
+        u.pitch = 1.1;
+        u.lang = 'pa-IN';
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+        return true;
+    }
+
+    function sfxBoneHit()    { if(!speakIfEnabled("ਆਲੈ ਫਿਰ ਬਾਬੂ ਦਾ ਚਿਕਨ")) synthBoneHit(); }
+    function sfxChickenHit() { if(!speakIfEnabled("ਆ ਸੋਨਿਓ ਤੁਸੀਂ ਤਾਂ ਮਾਰੀ ਸੁਟਿਆ")) synthChickenHit(); }
+    function sfxMilkPower()  { if(!speakIfEnabled("ਬਾਬੂ ਨੂੰ ਮਿਲ ਗਿਆ ਦੁੱਧ")) synthMilkPower(); }
+    function sfxPlayerDeath(){ if(!speakIfEnabled("ਤੁਸੀਂ ਤਾਂ ਜਾਣ ਹੀ ਲੈ ਲਈ ਮੇਰੀ")) synthPlayerDeath(); }
+
+    function sfxShoot()    { playToneSequence([{freq:800, delay:0, dur:0.06, vol:0.08}]); }
+    function sfxExplosion(){ playToneSequence([{freq:60, delay:0, dur:0.3, type:'sawtooth', vol:0.12}]); }
+    function sfxWaveClear(){ playToneSequence([{freq:600, delay:0, dur:0.1}, {freq:900, delay:0.1, dur:0.1}]); }
+
+    // ---------- GAME LOGIC (unchanged) ----------
+    let gameState = 'menu', score = 0, highScore = parseInt(localStorage.getItem('babujiHighScore')) || 0;
+    let lives = 3, wave = 1, waveTimer = 0, waveDelay = 180, shakeAmount = 0, playerInvincible = 0;
+    let difficulty = 'normal', playerWeapon = 'axe';
+    const player = { x:BASE_W/2, y:BASE_H-100, w:40, h:45, speed:6, shootCooldown:0, shootRate:16, powerLevel:1, powerTimer:0 };
+    let bullets=[], enemyBullets=[], enemies=[], particles=[], powerUps=[], stars=[];
+
+    function createStars(){ stars=[]; for(let i=0;i<150;i++) stars.push({ x:Math.random()*BASE_W, y:Math.random()*BASE_H, size:Math.random()*2.5+0.5, speed:Math.random()*2+0.5, twinkle:Math.random()*Math.PI*2, twinkleSpeed:Math.random()*0.05+0.01, color:['#ffccaa','#ffaa88','#ffbb99','#ffddcc','#ffeecc'][Math.floor(Math.random()*5)] }); }
+    createStars();
+    function applyDifficulty(){ if(difficulty==='easy'){lives=5;waveDelay=220;}else if(difficulty==='normal'){lives=3;waveDelay=180;}else{lives=2;waveDelay=140;} }
+    function resetGame(){ score=0;wave=1;waveTimer=0; player.x=BASE_W/2;player.y=BASE_H-100; player.shootCooldown=0;player.powerLevel=1;player.powerTimer=0; playerInvincible=0;shakeAmount=0; bullets=[];enemyBullets=[];enemies=[];particles=[];powerUps=[]; applyDifficulty(); }
+    function spawnWave(){
+        const num = 6+wave*2, rows=Math.min(3+Math.floor(wave/2),6), cols=Math.ceil(num/rows), sx=(BASE_W-(cols-1)*55)/2, sy=80;
+        const types=['basic','basic','basic','fast','tough']; if(wave>=3) types.push('shooter','shooter'); if(wave>=5) types.push('elite');
+        for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ if(enemies.length>=num) break;
+            const type=types[Math.floor(Math.random()*types.length)]; let hp=1,spd=1.2+wave*0.1,color='#cc8800',size=30,shoots=false;
+            if(type==='fast'){spd=2.4+wave*0.15;color='#ffaa00';size=26;} else if(type==='tough'){hp=2;color='#dd6600';size=34;}
+            else if(type==='shooter'){shoots=true;color='#ffcc44';spd=1.0;size=30;} else if(type==='elite'){hp=3;spd=1.4;shoots=true;color='#ff4400';size=36;}
+            enemies.push({x:sx+c*55,y:sy+r*50,w:size,h:size,type,hp,maxHp:hp,speed:spd,color,shoots,shootTimer:Math.random()*60|0,shootDelay:70-wave*2,moveDir:1,moveTimer:0}); }
+    }
+    function addParticles(x,y,color,count=8){ for(let i=0;i<count;i++) particles.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4-1,life:25+Math.random()*20,color,size:2+Math.random()*4}); }
+    function spawnPowerUp(x,y){ if(Math.random()<0.35) powerUps.push({x,y,w:22,h:22,type:'power',vy:2}); else if(Math.random()<0.15) powerUps.push({x,y,w:22,h:22,type:'life',vy:2.2}); }
+
+    const keys={}; let joystickActive=false,joystickId=null,joystickBase={x:0,y:0},joystickOffset={x:0,y:0}, MAX_JOYSTICK=38, firePressed=false,fireTouchId=null;
+    function updateKnob(){ if(!joystickActive){ joystickKnob.style.transform='translate(-50%,-50%)'; return; } let dx=Math.max(-MAX_JOYSTICK,Math.min(MAX_JOYSTICK,joystickOffset.x)), dy=Math.max(-MAX_JOYSTICK,Math.min(MAX_JOYSTICK,joystickOffset.y)); joystickKnob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; }
+    joystickZone.addEventListener('touchstart', async (e)=>{ e.preventDefault(); await ensureAudio(); if(joystickActive) return; const t=e.changedTouches[0]; joystickActive=true;joystickId=t.identifier; const r=joystickZone.getBoundingClientRect(); joystickBase.x=r.left+r.width/2; joystickBase.y=r.top+r.height/2; joystickOffset.x=t.clientX-joystickBase.x; joystickOffset.y=t.clientY-joystickBase.y; updateKnob(); },{passive:false});
+    joystickZone.addEventListener('touchmove', async (e)=>{ e.preventDefault(); await ensureAudio(); for(let i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===joystickId){ joystickOffset.x=e.changedTouches[i].clientX-joystickBase.x; joystickOffset.y=e.changedTouches[i].clientY-joystickBase.y; updateKnob(); break; } } },{passive:false});
+    joystickZone.addEventListener('touchend', (e)=>{ for(let i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===joystickId){ joystickActive=false;joystickId=null;joystickOffset.x=0;joystickOffset.y=0; updateKnob(); break; } } });
+    fireButton.addEventListener('touchstart', async (e)=>{ e.preventDefault(); await ensureAudio(); if(firePressed) return; firePressed=true; fireTouchId=e.changedTouches[0].identifier; fireButton.style.transform='scale(0.92)'; },{passive:false});
+    fireButton.addEventListener('touchend', (e)=>{ for(let i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===fireTouchId){ firePressed=false;fireTouchId=null; fireButton.style.transform='scale(1)'; break; } } });
+    window.addEventListener('keydown', async (e)=>{ keys[e.key]=true; e.preventDefault(); await ensureAudio(); });
+    window.addEventListener('keyup', (e)=>{ keys[e.key]=false; e.preventDefault(); });
+
+    function showPanel(id){ document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    async function startGameWithWeapon(w){ playerWeapon=w; await ensureAudio(); resetGame(); gameState='playing'; overlay.style.display='none'; mobileControls.style.display='flex'; }
+    document.getElementById('btn-start').addEventListener('click', async (e)=>{ e.stopPropagation(); await ensureAudio(); showPanel('weapon-panel'); });
+    document.getElementById('choose-axe').addEventListener('click', ()=>startGameWithWeapon('axe'));
+    document.getElementById('choose-sword').addEventListener('click', ()=>startGameWithWeapon('sword'));
+    document.getElementById('btn-weapon-back').addEventListener('click', (e)=>{ e.stopPropagation(); showPanel('menu-panel'); });
+    document.getElementById('btn-sound').addEventListener('click', async (e)=>{ e.stopPropagation(); await ensureAudio(); soundEnabled=!soundEnabled; document.getElementById('btn-sound').textContent=soundEnabled?'🔊 SOUND: ON':'🔇 SOUND: OFF'; });
+    document.getElementById('btn-settings').addEventListener('click', (e)=>{ e.stopPropagation(); showPanel('settings-panel'); });
+    document.getElementById('btn-about').addEventListener('click', (e)=>{ e.stopPropagation(); showPanel('about-panel'); });
+    document.getElementById('btn-settings-back').addEventListener('click', (e)=>{ e.stopPropagation(); difficulty=document.getElementById('difficulty-select').value; useSpeech = document.getElementById('speech-toggle').value === 'on'; showPanel('menu-panel'); });
+    document.getElementById('btn-about-back').addEventListener('click', (e)=>{ e.stopPropagation(); showPanel('menu-panel'); });
+    document.getElementById('volume-slider').addEventListener('input', (e)=>{ masterVolume=parseInt(e.target.value)/100; });
+    document.getElementById('btn-retry').addEventListener('click', async (e)=>{ e.stopPropagation(); await ensureAudio(); resetGame(); gameState='playing'; overlay.style.display='none'; mobileControls.style.display='flex'; });
+    document.getElementById('btn-menu').addEventListener('click', (e)=>{ e.stopPropagation(); gameState='menu'; overlay.style.display='flex'; mobileControls.style.display='none'; showPanel('menu-panel'); });
+
+    function gameOver(){ gameState='gameover'; sfxPlayerDeath(); if(score>highScore){highScore=score;localStorage.setItem('babujiHighScore',highScore);} overlay.style.display='flex'; mobileControls.style.display='none'; document.getElementById('gameover-score').innerHTML=`SCORE: ${score}<br>BEST: ${highScore}`; showPanel('gameover-panel'); }
+    function playerShoot(){ if(player.shootCooldown>0) return; player.shootCooldown=player.shootRate; sfxShoot(); const p=player.powerLevel; if(p===1) bullets.push({x:player.x,y:player.y-22,vy:-8}); else if(p===2){ bullets.push({x:player.x-8,y:player.y-18,vy:-8}); bullets.push({x:player.x+8,y:player.y-18,vy:-8}); } else { bullets.push({x:player.x,y:player.y-24,vy:-8}); bullets.push({x:player.x-12,y:player.y-16,vy:-7.5}); bullets.push({x:player.x+12,y:player.y-16,vy:-7.5}); } }
+
+    function update(){
+        if(gameState!=='playing') return;
+        let mx=0,my=0;
+        if(joystickActive){ const dx=joystickOffset.x,dy=joystickOffset.y,dist=Math.sqrt(dx*dx+dy*dy); if(dist>5){ const nx=dx/dist,ny=dy/dist; const md=Math.min(dist,MAX_JOYSTICK)/MAX_JOYSTICK; mx=nx*player.speed*md; my=ny*player.speed*md; } }
+        else { if(keys['ArrowLeft']||keys['a']) mx=-player.speed; if(keys['ArrowRight']||keys['d']) mx=player.speed; if(keys['ArrowUp']||keys['w']) my=-player.speed; if(keys['ArrowDown']||keys['s']) my=player.speed; }
+        player.x=Math.max(player.w/2,Math.min(BASE_W-player.w/2,player.x+mx)); player.y=Math.max(player.h/2,Math.min(BASE_H-player.h/2,player.y+my));
+        if(playerInvincible>0)playerInvincible--; if(player.powerTimer>0){player.powerTimer--;if(player.powerTimer===0)player.powerLevel=1;} if(player.shootCooldown>0)player.shootCooldown--;
+        if(firePressed||keys[' ']||keys['Space']) playerShoot();
+        enemies.forEach(e=>{ e.x+=e.speed*e.moveDir*0.5; e.moveTimer++; if(e.moveTimer>40){e.moveDir*=-1;e.moveTimer=0;} if(e.x<e.w/2){e.x=e.w/2;e.moveDir=1;} if(e.x>BASE_W-e.w/2){e.x=BASE_W-e.w/2;e.moveDir=-1;} if(e.shoots){ e.shootTimer++; if(e.shootTimer>=e.shootDelay){e.shootTimer=0; enemyBullets.push({x:e.x,y:e.y+e.h/2,vy:4.5});} } });
+        bullets.forEach(b=>b.y+=b.vy); enemyBullets.forEach(b=>b.y+=b.vy);
+        bullets=bullets.filter(b=>b.y>-20&&b.y<BASE_H+20); enemyBullets=enemyBullets.filter(b=>b.y>-20&&b.y<BASE_H+20);
+        for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; for(let j=enemies.length-1;j>=0;j--){ const e=enemies[j]; if(b.x>e.x-e.w/2&&b.x<e.x+e.w/2&&b.y>e.y-e.h/2&&b.y<e.y+e.h/2){ bullets.splice(i,1); e.hp--; sfxBoneHit(); addParticles(b.x,b.y,'#ffffff',6); if(e.hp<=0){ score+=(e.type==='elite'?250:(e.type==='tough'?150:100)); sfxExplosion(); addParticles(e.x,e.y,e.color,14); spawnPowerUp(e.x,e.y); enemies.splice(j,1); } break; } } }
+        if(playerInvincible<=0){ for(let i=enemyBullets.length-1;i>=0;i--){ const b=enemyBullets[i]; if(b.x>player.x-player.w/2&&b.x<player.x+player.w/2&&b.y>player.y-player.h/2&&b.y<player.y+player.h/2){ enemyBullets.splice(i,1); lives--; playerInvincible=90; shakeAmount=12; sfxChickenHit(); addParticles(player.x,player.y,'#ffaa00',20); if(player.powerLevel>1)player.powerLevel=Math.max(1,player.powerLevel-1); if(lives<=0){gameOver();return;} break; } } }
+        powerUps.forEach((p,idx)=>{ p.y+=p.vy; if(p.y>BASE_H+30){powerUps.splice(idx,1);return;} if(p.x>player.x-player.w/2&&p.x<player.x+player.w/2&&p.y>player.y-player.h/2&&p.y<player.y+player.h/2){ if(p.type==='power'){player.powerLevel=Math.min(3,player.powerLevel+1);player.powerTimer=600;}else{lives=Math.min(5,lives+1);} sfxMilkPower(); powerUps.splice(idx,1); } });
+        particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;}); particles=particles.filter(p=>p.life>0);
+        if(shakeAmount>0)shakeAmount*=0.9;
+        if(enemies.length===0){ if(waveTimer===0)sfxWaveClear(); waveTimer++; if(waveTimer>=waveDelay){wave++;waveTimer=0;spawnWave();} }
+    }
+
+    function drawMilk(x,y){ ctx.save();ctx.translate(x,y); ctx.fillStyle='#fff';ctx.shadowColor='#aaccff';ctx.shadowBlur=10; ctx.fillRect(-10,-14,20,24); ctx.fillStyle='#48f';ctx.fillRect(-10,-4,20,6); ctx.fillStyle='#ccc';ctx.fillRect(-4,-18,8,6); ctx.fillStyle='#fff';ctx.fillRect(-2,-18,4,4); ctx.fillStyle='#000';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('🥛',0,5); ctx.restore(); }
+    function drawAxe(x,y){ ctx.save();ctx.translate(x,y); ctx.fillStyle='#8B5A2B';ctx.shadowColor='#310';ctx.shadowBlur=8; ctx.fillRect(-6,0,12,30); ctx.fillStyle='#C0C0C0';ctx.shadowColor='#aaa'; ctx.beginPath();ctx.moveTo(-18,-10);ctx.lineTo(18,-10);ctx.lineTo(10,-28);ctx.lineTo(-10,-28);ctx.closePath();ctx.fill(); ctx.restore(); }
+    function drawSword(x,y){ ctx.save();ctx.translate(x,y); ctx.fillStyle='#E0E0E0';ctx.shadowColor='#fff';ctx.shadowBlur=12; ctx.fillRect(-4,-28,8,28); ctx.beginPath();ctx.moveTo(-4,-28);ctx.lineTo(0,-36);ctx.lineTo(4,-28);ctx.closePath();ctx.fill(); ctx.fillStyle='#B8860B';ctx.fillRect(-12,-2,24,6); ctx.fillStyle='#8B4513';ctx.fillRect(-4,4,8,14); ctx.restore(); }
+    function drawPlayer(){ if(playerWeapon==='axe')drawAxe(player.x,player.y); else drawSword(player.x,player.y); }
+    function drawChickenLeg(x,y,size=30){ ctx.save();ctx.translate(x,y); const s=size/30; ctx.fillStyle='#D2691E';ctx.shadowColor='#420';ctx.shadowBlur=8; ctx.beginPath();ctx.ellipse(0,5*s,12*s,10*s,0,0,Math.PI*2);ctx.fill(); ctx.fillStyle='#F5DEB3';ctx.beginPath();ctx.ellipse(0,-8*s,6*s,14*s,0,0,Math.PI*2);ctx.fill(); ctx.fillStyle='#fff';ctx.fillRect(-2*s,-20*s,4*s,12*s); ctx.restore(); }
+    function drawBone(x,y){ ctx.save();ctx.translate(x,y); ctx.fillStyle='#F5F5DC';ctx.shadowColor='#cb9';ctx.shadowBlur=6; ctx.fillRect(-3,-10,6,20); ctx.beginPath();ctx.arc(0,-10,5,0,Math.PI*2);ctx.fill(); ctx.beginPath();ctx.arc(0,10,5,0,Math.PI*2);ctx.fill(); ctx.restore(); }
+
+    function draw(){
+        ctx.clearRect(0,0,BASE_W,BASE_H); let sx=0,sy=0; if(shakeAmount>0.5){sx=(Math.random()-0.5)*shakeAmount;sy=(Math.random()-0.5)*shakeAmount;}
+        ctx.save();ctx.translate(sx,sy);
+        stars.forEach(s=>{ s.y+=s.speed; if(s.y>BASE_H+5){s.y=-5;s.x=Math.random()*BASE_W;} s.twinkle+=s.twinkleSpeed; ctx.fillStyle=s.color;ctx.globalAlpha=0.6+0.4*Math.sin(s.twinkle);ctx.fillRect(s.x,s.y,s.size,s.size); }); ctx.globalAlpha=1;
+        enemies.forEach(e=>{ drawChickenLeg(e.x,e.y,e.w); if(e.hp>1){ctx.fillStyle='#ffffff33';ctx.fillRect(e.x-e.w/2,e.y-e.h/2-8,e.w,5); ctx.fillStyle='#ffdd88';ctx.fillRect(e.x-e.w/2,e.y-e.h/2-8,e.w*(e.hp/e.maxHp),5);} });
+        if(playerInvincible<=0||Math.floor(Date.now()/100)%2===0) drawPlayer();
+        bullets.forEach(b=>drawBone(b.x,b.y)); enemyBullets.forEach(b=>drawChickenLeg(b.x,b.y,20));
+        powerUps.forEach(p=>drawMilk(p.x,p.y));
+        particles.forEach(p=>{ctx.fillStyle=p.color;ctx.globalAlpha=p.life/35;ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);}); ctx.globalAlpha=1;
+        ctx.restore();
+        ctx.fillStyle='#fff';ctx.font='bold 16px monospace';ctx.textAlign='left';
+        ctx.fillText(`SCORE: ${score}`,20,40); ctx.fillText(`WAVE: ${wave}`,20,70);
+        ctx.fillText(`♥ ${lives}`,BASE_W-90,40); ctx.fillText(`HI: ${highScore}`,BASE_W-130,70);
+        if(player.powerLevel>1){ctx.fillStyle='#ff0';ctx.fillText(`POWER: ${player.powerLevel}`,20,100);}
+    }
+    function loop(){ update(); draw(); requestAnimationFrame(loop); }
+    loop();
+})();
+</script>
+</body>
+</html>
